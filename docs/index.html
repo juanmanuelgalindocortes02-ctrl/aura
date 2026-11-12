@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aura · Tu música con luces, letra y efectos en Windows</title>
+  <meta name="description" content="Aura se conecta a Spotify, Apple Music, YouTube Music o la app que uses y le pone letra sincronizada, efectos neón al ritmo, fondo de pantalla animado e isla dinámica.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Space+Grotesk:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --noche: #120b1f;
+      --noche-2: #1c1230;
+      --estrella: #fff3e0;
+      --tenue: rgba(255, 243, 224, 0.72);
+      --rosa: #ff4fa3;
+      --violeta: #8b5cf6;
+      --linea: rgba(255, 243, 224, 0.16);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--noche);
+      color: var(--estrella);
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      font-size: 18px;
+      line-height: 1.55;
+    }
+    a { color: var(--rosa); }
+    a:hover { color: #ff86c0; }
+    :focus-visible { outline: 2px solid var(--rosa); outline-offset: 3px; border-radius: 4px; }
+
+    /* La isla de arriba: el guiño a la app */
+    .isla {
+      position: sticky; top: 12px; z-index: 5;
+      margin: 12px auto 0;
+      width: fit-content;
+      display: flex; align-items: center; gap: 12px;
+      padding: 8px 16px 8px 8px;
+      border-radius: 999px;
+      background: #000;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 24px rgba(255, 79, 163, 0.25);
+      font-size: 14px; font-weight: 500;
+    }
+    .isla-portada { width: 28px; height: 28px; border-radius: 8px; background: var(--violeta); }
+    .isla a { color: var(--estrella); text-decoration: none; }
+    .eq { display: flex; align-items: center; gap: 3px; height: 16px; }
+    .eq i { width: 3px; border-radius: 2px; background: var(--rosa); animation: eq 1s ease-in-out infinite; }
+    .eq i:nth-child(1) { height: 40%; }
+    .eq i:nth-child(2) { height: 90%; animation-delay: -0.3s; }
+    .eq i:nth-child(3) { height: 60%; animation-delay: -0.6s; }
+    .eq i:nth-child(4) { height: 80%; animation-delay: -0.15s; }
+    @keyframes eq { 50% { transform: scaleY(0.35); } }
+
+    /* Portada: la constelación que se va dibujando */
+    .portada {
+      position: relative;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px 96px;
+      text-align: center;
+    }
+    .cielo { width: 100%; max-width: 900px; height: auto; display: block; margin: 0 auto -24px; overflow: visible; }
+    .cielo line { stroke: rgba(255, 243, 224, 0.7); stroke-width: 1.2; }
+    .cielo .estrella { fill: var(--estrella); filter: drop-shadow(0 0 6px var(--rosa)); }
+    .cielo text { fill: var(--estrella); font-family: "Space Grotesk", sans-serif; font-size: 15px; font-weight: 500; }
+    .cielo text.grande { font-size: 30px; font-weight: 700; fill: var(--rosa); filter: drop-shadow(0 0 12px rgba(255, 79, 163, 0.7)); }
+    .cielo .mira { fill: none; stroke: var(--rosa); stroke-width: 1.4; }
+    .js .cielo .paso { opacity: 0; }
+    .js .cielo line.paso { opacity: 1; }
+
+    h1 {
+      margin: 0;
+      font-family: "Instrument Serif", Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(96px, 18vw, 220px);
+      line-height: 0.9;
+      letter-spacing: -0.01em;
+    }
+    .lema { max-width: 30ch; margin: 16px auto 32px; font-size: clamp(20px, 2.4vw, 26px); color: var(--tenue); }
+    .descargar {
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 18px 30px;
+      border-radius: 999px;
+      background: var(--rosa);
+      color: #1a0712;
+      font-weight: 700; font-size: 19px;
+      text-decoration: none;
+      box-shadow: 0 0 40px rgba(255, 79, 163, 0.45);
+    }
+    .descargar:hover { color: #1a0712; background: #ff6fb4; }
+    .nota { margin: 14px 0 0; font-size: 15px; color: var(--tenue); }
+
+    /* Secciones */
+    section { max-width: 1000px; margin: 0 auto; padding: 72px 24px; border-top: 1px solid var(--linea); }
+    h2 { margin: 0 0 32px; font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-size: clamp(40px, 6vw, 64px); line-height: 1; }
+    .funciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 36px 48px; margin: 0; }
+    .funciones dt { font-weight: 700; font-size: 20px; margin-bottom: 6px; }
+    .funciones dt::before { content: "✦"; color: var(--rosa); margin-right: 10px; }
+    .funciones dd { margin: 0; color: var(--tenue); max-width: 46ch; }
+
+    ol.pasos { margin: 0; padding: 0; list-style: none; counter-reset: paso; display: grid; gap: 24px; max-width: 70ch; }
+    ol.pasos li { counter-increment: paso; display: grid; grid-template-columns: 48px 1fr; gap: 16px; }
+    ol.pasos li::before {
+      content: counter(paso);
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      border: 1px solid var(--rosa);
+      color: var(--rosa);
+      font-weight: 700;
+    }
+    ol.pasos strong { display: block; }
+    ol.pasos span { color: var(--tenue); }
+    code {
+      font-family: Consolas, "Cascadia Code", monospace;
+      font-size: 0.9em;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--noche-2);
+      color: var(--estrella);
+    }
+    .ia p { max-width: 62ch; color: var(--tenue); margin: 0 0 16px; }
+
+    footer { padding: 40px 24px 56px; text-align: center; color: var(--tenue); font-size: 15px; border-top: 1px solid var(--linea); }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .eq i { animation: none; }
+      .js .cielo .paso { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="isla" aria-label="Aura">
+    <span class="isla-portada" aria-hidden="true"></span>
+    <a href="#descargar">Aura para Windows</a>
+    <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  </div>
+
+  <header class="portada" id="descargar">
+    <svg class="cielo" viewBox="0 0 900 300" role="img" aria-label="Una constelación que une las palabras tu música brilla con letra y luces">
+      <g id="trazos"></g>
+      <g id="nodos"></g>
+    </svg>
+    <h1>Aura</h1>
+    <p class="lema">Le pone letra, luces y efectos a la música que ya escuchas en tu compu.</p>
+    <a class="descargar" href="https://github.com/juanmanuelgalindocortes02-ctrl/aura/releases/latest">
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+      Descargar para Windows
+    </a>
+    <p class="nota">Gratis. Funciona en Windows 10 y 11.</p>
+  </header>
+
+  <section aria-labelledby="t-funciones">
+    <h2 id="t-funciones">Qué hace</h2>
+    <dl class="funciones">
+      <div>
+        <dt>Funciona con tu app de siempre</dt>
+        <dd>Detecta lo que suena en Spotify, Apple Music, YouTube Music, SoundCloud o el navegador. No tienes que iniciar sesión en nada.</dd>
+      </div>
+      <div>
+        <dt>Letra sincronizada</dt>
+        <dd>La letra va al tiempo de la canción. Puedes verla en lista o como constelación, palabra por palabra.</dd>
+      </div>
+      <div>
+        <dt>Efectos al ritmo</dt>
+        <dd>Cintas de neón, synthwave, láser y anillo que reaccionan al bajo, con los colores de cada portada.</dd>
+      </div>
+      <div>
+        <dt>Fondo de pantalla animado</dt>
+        <dd>Ponla detrás de tus íconos. Se pausa sola cuando juegas o maximizas una ventana para no gastar batería.</dd>
+      </div>
+      <div>
+        <dt>Isla dinámica</dt>
+        <dd>Una píldora arriba de la pantalla con lo que suena. Pasa el mouse para ver controles y la letra.</dd>
+      </div>
+      <div>
+        <dt>Carrusel de tu historial</dt>
+        <dd>Las últimas canciones que escuchaste, en portadas 3D que puedes recorrer.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section aria-labelledby="t-instalar">
+    <h2 id="t-instalar">Cómo instalarla</h2>
+    <ol class="pasos">
+      <li><div><strong>Descarga el instalador</strong><span>Es el archivo que termina en <code>-setup.exe</code>.</span></div></li>
+      <li><div><strong>Ábrelo</strong><span>Si Windows dice que protegió tu PC, da clic en "Más información" y luego en "Ejecutar de todas formas". Sale porque la app es nueva y todavía no tiene firma de pago.</span></div></li>
+      <li><div><strong>Pon música</strong><span>Abre tu app de música, dale play y Aura la detecta sola. Sus opciones están en el ícono junto al reloj de Windows.</span></div></li>
+    </ol>
+  </section>
+
+  <section class="ia" aria-labelledby="t-ia">
+    <h2 id="t-ia">Plática con Aura</h2>
+    <p>Aura trae un chat que te explica de qué trata la canción, te recomienda música y cambia los efectos si se lo pides. Funciona con una IA que corre en tu propia compu, sin internet y sin mandar tus datos a ningún lado.</p>
+    <p>Es opcional. Para activarla instala <a href="https://ollama.com">Ollama</a> y en una terminal escribe <code>ollama pull qwen2.5:3b</code>.</p>
+  </section>
+
+  <footer>Hecho por Juan.</footer>
+
+  <script>
+    // La constelación de la portada: las palabras aparecen una por una y se unen con líneas.
+    document.documentElement.classList.add("js");
+    const palabras = [
+      ["tu", 90, 210], ["música", 230, 110], ["brilla", 400, 180],
+      ["con", 520, 70], ["letra", 660, 150], ["y", 760, 60], ["luces", 830, 200],
+    ];
+    const uniones = [[0, 1], [1, 2], [2, 3], [3, 4], [1, 3], [4, 5], [5, 6], [4, 6]];
+    const ns = "http://www.w3.org/2000/svg";
+    const trazos = document.getElementById("trazos");
+    const nodos = document.getElementById("nodos");
+    const lineas = uniones.map(([a, b]) => {
+      const l = document.createElementNS(ns, "line");
+      const [, x1, y1] = palabras[a];
+      const [, x2, y2] = palabras[b];
+      Object.entries({ x1, y1, x2, y2 }).forEach(([k, v]) => l.setAttribute(k, v));
+      const largo = Math.hypot(x2 - x1, y2 - y1);
+      l.style.strokeDasharray = largo;
+      l.style.strokeDashoffset = largo;
+      l.style.transition = "stroke-dashoffset .5s ease-out";
+      l.classList.add("paso");
+      trazos.append(l);
+      return { l, b };
+    });
+    const elementos = palabras.map(([texto, x, y], i) => {
+      const g = document.createElementNS(ns, "g");
+      g.classList.add("paso");
+      g.style.transition = "opacity .4s";
+      const r = 6;
+      g.innerHTML = `<path class="estrella" d="M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z"/>` +
+        (i === palabras.length - 1
+          ? `<circle class="mira" cx="${x}" cy="${y}" r="20"/><text class="grande" x="${x}" y="${y + 52}" text-anchor="middle">${texto}</text>`
+          : `<text x="${x + 10}" y="${y + 24}">${texto}</text>`);
+      nodos.append(g);
+      return g;
+    });
+    const mostrar = (i) => {
+      elementos[i].style.opacity = 1;
+      lineas.filter((u) => u.b === i).forEach((u) => { u.l.style.strokeDashoffset = 0; });
+    };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      elementos.forEach((_, i) => mostrar(i));
+    } else {
+      elementos.forEach((_, i) => setTimeout(() => mostrar(i), 300 + i * 420));
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Aura · Isla</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/src/isla.css">
+</head>
+<body>
+  <div id="isla" class="isla" role="group" aria-label="Isla dinámica de Aura">
+    <div class="fila">
+      <div class="mini-portada" aria-hidden="true"><img id="i-portada" alt="" hidden></div>
+      <div class="info">
+        <span id="i-titulo" class="titulo">Sin música</span>
+        <span id="i-artista" class="artista"></span>
+      </div>
+      <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p id="i-linea" class="linea"></p>
+
+    <div class="abajo">
+      <span id="i-actual" class="tiempo">0:00</span>
+      <div class="pista"><div id="i-avance" class="avance"></div></div>
+      <span id="i-total" class="tiempo">0:00</span>
+    </div>
+    <div class="botones">
+      <button id="i-prev" aria-label="Anterior">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 20 9 12l10-8v16z"/><rect x="4" y="5" width="2.5" height="14" rx="1"/></svg>
+      </button>
+      <button id="i-play" class="play" aria-label="Reproducir">
+        <svg class="ic-play" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+        <svg class="ic-pausa" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+      </button>
+      <button id="i-next" aria-label="Siguiente">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m5 4 10 8-10 8V4z"/><rect x="17.5" y="5" width="2.5" height="14" rx="1"/></svg>
+      </button>
+    </div>
+  </div>
+  <script type="module" src="/src/isla.js"></script>
+</body>
+</html>
