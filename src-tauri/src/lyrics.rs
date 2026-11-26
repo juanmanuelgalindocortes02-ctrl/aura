@@ -15,6 +15,8 @@ pub struct Lyrics {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Lrc {
+    #[serde(default)]
+    artist_name: String,
     synced_lyrics: Option<String>,
     plain_lyrics: Option<String>,
     #[serde(default)]
@@ -36,25 +38,50 @@ impl From<Lrc> for Lyrics {
 const API: &str = "https://lrclib.net/api";
 const AGENTE: &str = "Aura/0.1 (reproductor personal)";
 
-/// Quita "(feat. ...)", "[...]" y " - Remastered" para que la búsqueda acierte más.
-fn limpiar(titulo: &str) -> String {
-    let mut t = titulo;
-    for corte in [" (feat", " (with", " [", " - "] {
-        if let Some(i) = t.find(corte) {
-            t = &t[..i];
-        }
-    }
-    t.trim().to_string()
+/// Minúsculas y sin acentos, para comparar "Canción" con "cancion".
+fn normal(t: &str) -> String {
+    t.to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'á' | 'à' | 'ä' | 'â' => 'a',
+            'é' | 'è' | 'ë' | 'ê' => 'e',
+            'í' | 'ì' | 'ï' | 'î' => 'i',
+            'ó' | 'ò' | 'ö' | 'ô' => 'o',
+            'ú' | 'ù' | 'ü' | 'û' => 'u',
+            'ñ' => 'n',
+            otro => otro,
+        })
+        .collect()
 }
 
-/// Solo el primer artista: "A, B & C" → "A".
+/// Busca un corte sin importar mayúsculas y devuelve la posición en el texto original.
+fn posicion(t: &str, corte: &str) -> Option<usize> {
+    t.to_lowercase().find(corte).filter(|&i| t.is_char_boundary(i))
+}
+
+/// Quita "(feat. ...)", "ft. ...", "[...]", " - Remastered", "(Letra)"... para que la búsqueda acierte más.
+fn limpiar(titulo: &str) -> String {
+    let mut t = titulo.to_string();
+    for corte in [
+        " (feat", " (ft", " feat.", " feat ", " ft.", " ft ", " (with", " (con ", " [", " - ", " | ",
+        " (letra", " (lyric", " (video", " (audio", " (official", " (oficial", " (en vivo", " (live",
+    ] {
+        if let Some(i) = posicion(&t, corte) {
+            t.truncate(i);
+        }
+    }
+    t.trim().trim_matches('"').trim().to_string()
+}
+
+/// Solo el primer artista: "A, B & C", "A x B", "A y B", "A ft. B" → "A".
 fn principal(artista: &str) -> String {
-    artista
-        .split([',', '&'])
-        .next()
-        .unwrap_or(artista)
-        .trim()
-        .to_string()
+    let mut a = artista.to_string();
+    for corte in [",", " & ", " x ", " y ", " ft.", " ft ", " feat", " with ", " con "] {
+        if let Some(i) = posicion(&a, corte) {
+            a.truncate(i);
+        }
+    }
+    a.trim().to_string()
 }
 
 fn exacta(artista: &str, titulo: &str, album: &str, segundos: i64) -> Option<Lrc> {
@@ -83,6 +110,18 @@ fn buscar_lista(artista: &str, titulo: &str) -> Vec<Lrc> {
         .unwrap_or_default()
 }
 
+/// Búsqueda libre ("artista canción" en un solo texto): perdona acentos y nombres escritos distinto.
+fn buscar_libre(texto: &str) -> Vec<Lrc> {
+    ureq::get(&format!("{API}/search"))
+        .set("User-Agent", AGENTE)
+        .query("q", texto)
+        .timeout(Duration::from_secs(10))
+        .call()
+        .ok()
+        .and_then(|r| r.into_json().ok())
+        .unwrap_or_default()
+}
+
 pub fn buscar(artista: &str, titulo: &str, album: &str, duracion_ms: i64) -> Lyrics {
     let segundos = (duracion_ms as f64 / 1000.0).round() as i64;
 
@@ -95,16 +134,30 @@ pub fn buscar(artista: &str, titulo: &str, album: &str, duracion_ms: i64) -> Lyr
         }
     }
 
-    // 2) Búsqueda libre con el título limpio; gana la sincronizada con duración más parecida.
-    let mut lista = buscar_lista(&principal(artista), &limpiar(titulo));
-    if lista.is_empty() {
-        lista = buscar_lista(artista, titulo);
+    // 2) Varias búsquedas, de la más precisa a la más amplia. Las canciones en español suelen
+    //    venir como "A x B", "ft." o con acentos distintos, por eso se prueba de varias formas.
+    let art = principal(artista);
+    let tit = limpiar(titulo);
+    let mut lista = buscar_lista(&art, &tit);
+    if !lista.iter().any(|l| l.synced_lyrics.is_some()) {
+        lista.extend(buscar_libre(&format!("{art} {tit}")));
     }
+    if !lista.iter().any(|l| l.synced_lyrics.is_some()) {
+        // Solo por título, y luego se revisa que el artista se parezca.
+        let artista_n = normal(&art);
+        lista.extend(buscar_libre(&tit).into_iter().filter(|l| {
+            let otro = normal(&l.artist_name);
+            !artista_n.is_empty() && !otro.is_empty() && (otro.contains(&artista_n) || artista_n.contains(&otro))
+        }));
+    }
+
     let diferencia = |l: &Lrc| match (l.duration, segundos) {
         (Some(d), s) if s > 0 => (d - s as f64).abs(),
         _ => 0.0,
     };
-    lista.retain(|l| segundos == 0 || diferencia(l) <= 5.0);
+    // Gana la sincronizada con la duración más parecida. Los videos de YouTube suelen durar
+    // más que la canción (intro, final), así que se aceptan hasta 20 s de diferencia.
+    lista.retain(|l| segundos == 0 || diferencia(l) <= 20.0);
     lista.sort_by(|a, b| {
         b.synced_lyrics
             .is_some()

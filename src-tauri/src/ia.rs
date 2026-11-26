@@ -26,7 +26,7 @@ Puedes controlar el reproductor agregando acciones: \
 pausa (pausar o reanudar), siguiente, anterior, \
 escena con valor cintas | synthwave | laser | anillo (efectos visuales), \
 efectos con valor completo | ligero | apagado, \
-vista con valor letra | constelacion | carrusel | normal (constelacion es la letra palabra por palabra como estrellas), \
+vista con valor letra | constelacion | mensajes | carrusel | normal (constelacion es la letra palabra por palabra como estrellas; mensajes es la letra como burbujas de chat), \
 buscar con valor 'artista canción' (abre la búsqueda para ponerla). \
 Solo agrega acciones cuando el usuario lo pida o claramente lo quiera; si no, deja la lista vacía. \
 Si recomiendas varias canciones, menciónalas en la respuesta y agrega como mucho una acción buscar con la principal.";

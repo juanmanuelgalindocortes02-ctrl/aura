@@ -229,19 +229,6 @@ export function iniciarEfectos() {
     if (d.drop) glitch();
   });
 
-  const btn = document.getElementById("btn-efectos");
-  btn.addEventListener("click", () => {
-    modo = MODOS[(MODOS.indexOf(modo) + 1) % MODOS.length];
-    localStorage.setItem("aura.efectos", modo);
-    aplicarModo();
-  });
-  document.getElementById("btn-escena").addEventListener("click", () => {
-    escena = ESCENAS[(ESCENAS.indexOf(escena) + 1) % ESCENAS.length];
-    localStorage.setItem("aura.escena", escena);
-    actualizarBotonEscena();
-    avisar(NOMBRES_ESCENA[escena]);
-  });
-  actualizarBotonEscena();
   aplicarModo();
 }
 
@@ -250,21 +237,17 @@ export function ponerEscena(nombre) {
   if (!ESCENAS.includes(nombre)) return;
   escena = nombre;
   localStorage.setItem("aura.escena", escena);
-  actualizarBotonEscena();
   avisar(NOMBRES_ESCENA[escena]);
 }
+
+export const obtenerEscena = () => escena;
+export const obtenerModo = () => modo;
 
 export function ponerModoEfectos(m) {
   if (!MODOS.includes(m)) return;
   modo = m;
   localStorage.setItem("aura.efectos", modo);
   aplicarModo();
-}
-
-function actualizarBotonEscena() {
-  const b = document.getElementById("btn-escena");
-  b.setAttribute("aria-label", `Escena: ${NOMBRES_ESCENA[escena]}. Cambiar`);
-  b.title = `Escena: ${NOMBRES_ESCENA[escena]}`;
 }
 
 let avisoTimer = 0;
@@ -300,12 +283,6 @@ export function pausarEfectos(si) {
 }
 
 function aplicarModo() {
-  const btn = document.getElementById("btn-efectos");
-  btn.setAttribute("aria-label", NOMBRES[modo]);
-  btn.title = NOMBRES[modo];
-  btn.setAttribute("aria-pressed", String(modo !== "apagado"));
-  btn.dataset.modo = modo;
-  document.getElementById("btn-escena").disabled = modo === "apagado";
   canvas.hidden = modo === "apagado" || !gl;
   invoke("set_visualizer", { on: modo !== "apagado" && !pausado }).catch(() => {});
   cancelAnimationFrame(rafId);
@@ -454,7 +431,29 @@ export function colorDePortada(src) {
   img.src = src;
 }
 
+// Color elegido en el menú; null = tomarlo de cada portada.
+let acentoFijo = null;
+let colorPortada = [[1, 0.31, 0.64], [0.55, 0.36, 0.96]];
+
+/** hex como "#38bdf8", o null para volver a los colores de la portada. */
+export function fijarAcento(hex) {
+  if (!hex) {
+    acentoFijo = null;
+    return pintarColores(...colorPortada);
+  }
+  const n = parseInt(hex.slice(1), 16);
+  const a = [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  const [h] = aHsl(a[0] * 255, a[1] * 255, a[2] * 255);
+  acentoFijo = [a, aRgb((h + 0.14) % 1, 0.85, 0.6)];
+  pintarColores(...acentoFijo);
+}
+
 function usarColores(a, b) {
+  colorPortada = [a, b];
+  if (!acentoFijo) pintarColores(a, b);
+}
+
+function pintarColores(a, b) {
   metaA.splice(0, 3, ...a);
   metaB.splice(0, 3, ...b);
   const rgb = a.map((v) => Math.round(v * 255)).join(", ");

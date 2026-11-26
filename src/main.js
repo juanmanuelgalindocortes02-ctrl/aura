@@ -3,6 +3,8 @@ import { listen, emit } from "@tauri-apps/api/event";
 import { iniciarEfectos, colorDePortada, pausarEfectos, ponerEscena, ponerModoEfectos, avisar } from "./efectos.js";
 import { iniciarChat } from "./chat.js";
 import { Constelacion } from "./constelacion.js";
+import { Mensajes } from "./mensajes.js";
+import { iniciarAjustes } from "./ajustes.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -31,9 +33,13 @@ $("portada").addEventListener("error", () => {
   $("actual").classList.add("sin-portada");
 });
 let letra = { clave: "", lineas: [], plano: null, activa: -1 };
-let mostrarLetra = true;
-let estiloLetra = localStorage.getItem("aura.estiloLetra") === "constelacion" ? "constelacion" : "lista";
+const ESTILOS_LETRA = ["lista", "constelacion", "mensajes"];
+const NOMBRE_ESTILO = { lista: "lista", constelacion: "constelación", mensajes: "mensajes" };
+let mostrarLetra = localStorage.getItem("aura.mostrarLetra") !== "no";
+let estiloLetra = ESTILOS_LETRA.includes(localStorage.getItem("aura.estiloLetra")) ? localStorage.getItem("aura.estiloLetra") : "lista";
 const constel = new Constelacion($("constelacion"));
+const msj = new Mensajes($("mensajes"));
+let avisoSinTiempos = "";
 
 listen("media://state", (e) => pintar(e.payload));
 iniciarEfectos();
@@ -196,6 +202,7 @@ function animar() {
     seguirLetra(pos);
     avisarLinea(pos);
     if (!$("constelacion").hidden) constel.actualizar(letra.lineas, pos);
+    if (!$("mensajes").hidden) msj.actualizar(letra.lineas, pos);
   } else if (!arrastrando) {
     barra.value = 0;
     barra.style.setProperty("--avance", "0%");
@@ -282,12 +289,21 @@ function pintarLetra() {
   $("letra").classList.toggle("plana", !letra.lineas.length && !!letra.plano);
   $("btn-letra").disabled = !hay;
   const visible = hay && mostrarLetra && !mostrarCarrusel;
-  // La constelación necesita tiempos; si la letra no está sincronizada se usa la lista.
-  const usarConst = visible && estiloLetra === "constelacion" && letra.lineas.length > 0;
-  $("letra").hidden = !visible || usarConst;
+  // Constelación y mensajes necesitan tiempos; si la letra no está sincronizada se usa la lista.
+  const sincronizada = letra.lineas.length > 0;
+  const usarConst = visible && estiloLetra === "constelacion" && sincronizada;
+  const usarMsj = visible && estiloLetra === "mensajes" && sincronizada;
+  $("letra").hidden = !visible || usarConst || usarMsj;
   $("constelacion").hidden = !usarConst;
+  $("mensajes").hidden = !usarMsj;
   document.body.classList.toggle("estilo-constelacion", usarConst);
+  document.body.classList.toggle("estilo-mensajes", usarMsj);
   constel.reiniciar();
+  msj.reiniciar();
+  if (visible && estiloLetra !== "lista" && !sincronizada && avisoSinTiempos !== letra.clave) {
+    avisoSinTiempos = letra.clave;
+    avisar(`Esta letra no trae tiempos; se muestra en lista en vez de ${NOMBRE_ESTILO[estiloLetra]}`);
+  }
   document.body.classList.toggle("con-letra", visible);
 }
 
@@ -315,24 +331,28 @@ function seguirLetra(pos) {
 }
 
 $("btn-letra").addEventListener("click", () => {
-  if (!mostrarLetra || mostrarCarrusel) {
-    mostrarLetra = true;
-    estiloLetra = "lista";
-  } else if (estiloLetra === "lista") {
-    estiloLetra = "constelacion";
-  } else {
-    mostrarLetra = false;
+  // Ciclo: lista → constelación → mensajes → oculta
+  if (!mostrarLetra || mostrarCarrusel) ponerEstiloLetra("lista");
+  else {
+    const i = ESTILOS_LETRA.indexOf(estiloLetra);
+    ponerEstiloLetra(i === ESTILOS_LETRA.length - 1 ? "oculta" : ESTILOS_LETRA[i + 1]);
   }
+  avisar(!mostrarLetra ? "Letra oculta" : `Letra: ${NOMBRE_ESTILO[estiloLetra]}`);
+});
+
+/** estilo: "lista" | "constelacion" | "mensajes" | "oculta" */
+function ponerEstiloLetra(estilo) {
+  mostrarLetra = estilo !== "oculta";
+  if (mostrarLetra) estiloLetra = estilo;
   localStorage.setItem("aura.estiloLetra", estiloLetra);
-  avisar(!mostrarLetra ? "Letra oculta" : estiloLetra === "lista" ? "Letra: lista" : "Letra: constelación");
+  localStorage.setItem("aura.mostrarLetra", mostrarLetra ? "si" : "no");
   actualizarBotonLetra();
   if (mostrarCarrusel) ponerCarrusel(false); else pintarLetra();
-});
+}
 
 function actualizarBotonLetra() {
   $("btn-letra").setAttribute("aria-pressed", String(mostrarLetra));
-  $("btn-letra").setAttribute("aria-label",
-    !mostrarLetra ? "Mostrar letra" : estiloLetra === "lista" ? "Letra en lista. Cambiar a constelación" : "Letra en constelación. Ocultar");
+  $("btn-letra").setAttribute("aria-label", !mostrarLetra ? "Mostrar letra" : `Letra en ${NOMBRE_ESTILO[estiloLetra]}. Cambiar estilo`);
 }
 
 // Reloj grande
@@ -513,12 +533,9 @@ function ponerCarrusel(si) {
 
 function ponerVista(v) {
   if (v === "carrusel") return ponerCarrusel(true);
-  if (v === "constelacion" || v === "constelación") { estiloLetra = "constelacion"; v = "letra"; }
-  else if (v === "letra") estiloLetra = "lista";
-  localStorage.setItem("aura.estiloLetra", estiloLetra);
-  mostrarLetra = v === "letra";
-  $("btn-letra").setAttribute("aria-pressed", String(mostrarLetra));
-  ponerCarrusel(false);
+  if (v === "constelación") v = "constelacion";
+  if (v === "letra") v = "lista";
+  ponerEstiloLetra(ESTILOS_LETRA.includes(v) ? v : "oculta");
 }
 
 function contextoParaIA() {
@@ -538,6 +555,17 @@ function contextoParaIA() {
   }
   return partes.join("\n");
 }
+
+iniciarAjustes({
+  obtenerPortada: () => {
+    const src = $("portada").getAttribute("src");
+    return estado?.now && src && !$("portada").hidden ? src : null;
+  },
+  letra: {
+    obtener: () => (mostrarLetra ? estiloLetra : "oculta"),
+    poner: ponerEstiloLetra,
+  },
+});
 
 iniciarChat({
   contexto: contextoParaIA,

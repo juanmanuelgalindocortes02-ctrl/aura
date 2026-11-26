@@ -10,10 +10,12 @@
 </head>
 <body>
   <div class="capa-fondo" aria-hidden="true">
+    <img id="fondo-propio" class="fondo-propio" alt="">
     <img id="fondo-img" alt="">
     <div class="velo"></div>
   </div>
   <canvas id="neon" class="neon" aria-hidden="true"></canvas>
+  <div id="borde-neon" class="borde-neon" aria-hidden="true"></div>
 
   <div id="reloj" class="reloj" aria-hidden="true">
     <span id="reloj-fecha" class="reloj-fecha"></span>
@@ -58,6 +60,8 @@
 
     <section id="constelacion" class="constelacion" hidden aria-hidden="true"></section>
 
+    <section id="mensajes" class="mensajes" hidden aria-hidden="true"></section>
+
     <section id="letra" class="letra" hidden aria-live="off">
       <div id="letra-lineas" class="letra-lineas"></div>
     </section>
@@ -95,14 +99,11 @@
       <span id="t-total" class="tiempo">0:00</span>
     </div>
 
+    <button id="btn-ajustes" class="btn-modo" aria-haspopup="dialog" aria-expanded="false" aria-controls="ajustes" aria-label="Personalizar" title="Personalizar">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.7 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.8-1.7 1.7-1.7h2c3.1 0 5.5-2.5 5.5-5.6C22 6 17.5 2 12 2z"/></svg>
+    </button>
     <button id="btn-chat" class="btn-modo" aria-pressed="false" aria-label="Platicar con Aura">
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
-    </button>
-    <button id="btn-efectos" class="btn-modo" aria-pressed="true" aria-label="Efectos: completos">
-      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
-    </button>
-    <button id="btn-escena" class="btn-modo" aria-label="Cambiar escena">
-      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7l10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
     </button>
     <button id="btn-carrusel" class="btn-modo" aria-pressed="false" aria-label="Mostrar carrusel">
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="12" height="14" rx="2"/><path d="M2 7v10M22 7v10"/></svg>
@@ -129,6 +130,58 @@
       </button>
     </form>
   </aside>
+
+  <div id="ajustes" class="ajustes" hidden>
+    <div class="ajustes-panel" role="dialog" aria-modal="true" aria-labelledby="ajustes-titulo">
+      <header class="ajustes-cabeza">
+        <h2 id="ajustes-titulo">Personalizar</h2>
+        <button id="ajustes-cerrar" class="btn-icono" aria-label="Cerrar">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="ajustes-cuerpo">
+        <section aria-labelledby="t-aj-letra">
+          <h3 id="t-aj-letra">Letra</h3>
+          <div id="aj-letra" class="mosaicos"></div>
+        </section>
+        <section aria-labelledby="t-aj-escena">
+          <h3 id="t-aj-escena">Efectos</h3>
+          <div id="aj-escena" class="mosaicos"></div>
+          <div id="aj-intensidad" class="segmentos" role="group" aria-label="Intensidad de los efectos">
+            <button data-v="completo">Completos</button>
+            <button data-v="ligero">Ligeros (ahorra batería)</button>
+          </div>
+        </section>
+        <section aria-labelledby="t-aj-fondo">
+          <h3 id="t-aj-fondo">Fondo</h3>
+          <div id="aj-fondo" class="mosaicos"></div>
+          <div id="aj-fila-color-fondo" class="fila-ajuste" hidden>
+            <label for="aj-color-fondo">Color del fondo</label>
+            <input id="aj-color-fondo" type="color">
+          </div>
+          <button id="aj-cambiar-imagen" class="boton-texto" hidden>Cambiar imagen</button>
+          <input id="aj-archivo" type="file" accept="image/*" hidden>
+        </section>
+        <section aria-labelledby="t-aj-color">
+          <h3 id="t-aj-color">Color de las luces</h3>
+          <div class="fila-ajuste">
+            <div id="aj-acento" class="muestras" role="group" aria-label="Color de las luces"></div>
+            <label class="propio" title="Otro color">
+              <span class="solo-lector">Otro color</span>
+              <input id="aj-acento-propio" type="color">
+            </label>
+          </div>
+        </section>
+        <section aria-labelledby="t-aj-borde">
+          <h3 id="t-aj-borde">Borde de luz</h3>
+          <div class="fila-ajuste">
+            <span>Un brillo neón alrededor de toda la pantalla que late con el bajo.</span>
+            <button id="aj-borde" class="interruptor" role="switch" aria-checked="false" aria-label="Borde de luz"><span></span></button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
 
   <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
 
